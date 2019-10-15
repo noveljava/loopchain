@@ -2,7 +2,7 @@
   "log": {
     "logger": "iconservice",
     "colorLog": true,
-    "level": "warning",
+    "level": "debug",
     "outputType": "console|file",
     "rotate": {
       "type": "period|bytes",
