@@ -37,10 +37,9 @@ develop: install generate-proto
 
 # pip install packages
 install:
-	$(PIP_INSTALL) git+https://github.com/icon-project/icon-service.git@master
+	$(PIP_INSTALL) git+https://github.com/icon-project/icon-service.git@test-ctz-debug-old
 	$(PIP_INSTALL) git+https://github.com/icon-project/icon-commons.git@master
-	$(PIP_INSTALL) git+https://github.com/icon-project/icon-rpc-server.git@master
-	$(PIP_INSTALL) tbears
+	$(PIP_INSTALL) git+https://github.com/icon-project/icon-rpc-server.git@1.3.1.1
 	$(PIP_INSTALL_REQUIREMENTS)
 
 # Generate python gRPC proto and generate a key
