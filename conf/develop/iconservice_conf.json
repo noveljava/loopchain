@@ -19,7 +19,7 @@
     "deployerWhiteList": false,
     "scorePackageValidator": false
   },
-  "mainPRepCount": 12,
+  "mainPRepCount": 11,
   "mainAndSubPRepCount": 12,
   "decentralizeTrigger": 0,
   "iissCalculatePeriod": 30,
