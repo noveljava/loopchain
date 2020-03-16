@@ -70,6 +70,7 @@ parts:
     python-version: python3
     python-packages:
       - idna==2.7
+      - plyvel==1.1.0
     build-packages:
       - automake
       - pkg-config
