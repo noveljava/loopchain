@@ -19,6 +19,7 @@ import signal
 import traceback
 
 from earlgrey import MessageQueueService
+from lft.event import EventSystem
 
 from loopchain import configure as conf
 from loopchain import utils
@@ -31,6 +32,7 @@ from loopchain.blockchain.types import Hash32
 from loopchain.channel.channel_inner_service import ChannelInnerService
 from loopchain.channel.channel_property import ChannelProperty
 from loopchain.channel.channel_statemachine import ChannelStateMachine
+from loopchain.consensus.runner import ConsensusRunner
 from loopchain.crypto.signature import Signer
 from loopchain.peer import BlockManager
 from loopchain.protos import loopchain_pb2
@@ -50,12 +52,15 @@ class ChannelService:
         self.__rs_client: RestClient = None
         self.__timer_service = TimerService()
         self.__node_subscriber: NodeSubscriber = None
+        self.__consensus_runner = None
+        self.__event_system = EventSystem()
 
         loggers.get_preset().channel_name = channel_name
         loggers.get_preset().update_logger()
 
         channel_queue_name = conf.CHANNEL_QUEUE_NAME_FORMAT.format(channel_name=channel_name, amqp_key=amqp_key)
         self.__inner_service = ChannelInnerService(
+            self.__event_system,
             amqp_target, channel_queue_name, conf.AMQP_USERNAME, conf.AMQP_PASSWORD, channel_service=self)
 
         logging.info(f"ChannelService : {channel_name}, Queue : {channel_queue_name}")
@@ -209,6 +214,7 @@ class ChannelService:
         await self.__init_score_container()
         await self.__inner_service.connect(conf.AMQP_CONNECTION_ATTEMPTS, conf.AMQP_RETRY_DELAY, exclusive=True)
         await self.__init_sub_services()
+        self.__consensus_runner = ConsensusRunner(ChannelProperty().peer_address, self.__event_system)
 
     async def evaluate_network(self):
         await self._init_rs_client()
