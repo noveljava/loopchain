@@ -17,9 +17,9 @@ import sys
 import yappi
 
 from legacy import launcher as launcher2
+from legacy.blockchain.exception import ConsensusChanged
 from loopchain import launcher as launcher3
 from loopchain import utils
-from loopchain.blockchain.exception import ConsensusChanged
 from . import configure as conf
 
 
