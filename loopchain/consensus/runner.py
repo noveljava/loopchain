@@ -14,10 +14,10 @@ if TYPE_CHECKING:
 class ConsensusRunner(EventRegister):
     def __init__(self, node_id: 'ExternalAddress', event_system: 'EventSystem',
                  data_factory: 'DataFactory', vote_factory: 'VoteFactory', broadcast_scheduler: 'BroadcastScheduler'):
+        super().__init__(event_system.simulator)
         self.broadcast_scheduler = broadcast_scheduler
         self.event_system = event_system
         self.consensus = Consensus(self.event_system, node_id, data_factory, vote_factory)
-        super().__init__(self.event_system.simulator)
 
     def start(self):
         self.event_system.start()
@@ -37,8 +37,8 @@ class ConsensusRunner(EventRegister):
         await self.consensus.receive_vote(vote)
 
     _handler_prototypes = {
-        BroadcastDataEvent, _on_event_broadcast_data,
-        BroadcastVoteEvent, _on_event_broadcast_vote,
-        ReceiveDataEvent, _on_event_receive_data,
-        ReceiveVoteEvent, _on_event_receive_vote
+        BroadcastDataEvent: _on_event_broadcast_data,
+        BroadcastVoteEvent: _on_event_broadcast_vote,
+        ReceiveDataEvent: _on_event_receive_data,
+        ReceiveVoteEvent: _on_event_receive_vote
     }

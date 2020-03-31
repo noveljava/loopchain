@@ -19,6 +19,8 @@ import signal
 import traceback
 
 from earlgrey import MessageQueueService
+from lft.app.data import DefaultDataFactory
+from lft.app.vote import DefaultVoteFactory
 from lft.event import EventSystem
 
 from loopchain import configure as conf
@@ -125,17 +127,6 @@ class ChannelService:
         loop = MessageQueueService.loop
         loop.run_until_complete(self.init())
 
-        blockchain = self.block_manager.blockchain
-        block_version = blockchain.block_versioner.get_version(blockchain.block_height + 1)
-
-        if block_version == "1.0":
-            raise ConsensusChanged(
-                node_id=ChannelProperty().peer_address,
-                remain_txs=[],
-                last_unconfirmed_block=None,
-                last_unconfirmed_votes=None
-            )
-
         # loop.set_debug(True)
         loop.create_task(_serve())
         loop.add_signal_handler(signal.SIGINT, self.close)
@@ -214,7 +205,13 @@ class ChannelService:
         await self.__init_score_container()
         await self.__inner_service.connect(conf.AMQP_CONNECTION_ATTEMPTS, conf.AMQP_RETRY_DELAY, exclusive=True)
         await self.__init_sub_services()
-        self.__consensus_runner = ConsensusRunner(ChannelProperty().peer_address, self.__event_system)
+        self.__consensus_runner = ConsensusRunner(
+            ChannelProperty().peer_address,
+            self.__event_system,
+            DefaultDataFactory(ChannelProperty().peer_address),
+            DefaultVoteFactory(ChannelProperty().peer_address),
+            self.__broadcast_scheduler
+        )
 
     async def evaluate_network(self):
         await self._init_rs_client()
@@ -298,7 +295,8 @@ class ChannelService:
                 channel_service=self,
                 peer_id=ChannelProperty().peer_id,
                 channel_name=ChannelProperty().name,
-                store_identity=ChannelProperty().peer_target
+                store_identity=ChannelProperty().peer_target,
+                event_system=self.__event_system
             )
         except KeyValueStoreError as e:
             utils.exit_and_msg("KeyValueStoreError(" + str(e) + ")")

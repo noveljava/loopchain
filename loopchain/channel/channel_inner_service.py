@@ -31,6 +31,7 @@ from loopchain.utils.message_queue import StubCollection
 
 if TYPE_CHECKING:
     from loopchain.channel.channel_service import ChannelService
+    from lft.event import EventSystem
 
 
 class ChannelTxCreatorInnerTask:
@@ -399,7 +400,6 @@ class ChannelInnerTask:
 
         self.__sub_processes = []
         self.__loop_for_sub_services = None
-
 
     def init_sub_service(self, loop):
         if len(self.__sub_processes) > 0:
