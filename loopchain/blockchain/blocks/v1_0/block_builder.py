@@ -14,15 +14,64 @@
 """block builder for version 0.5 block"""
 
 from loopchain.blockchain.blocks import BlockProverType
-from loopchain.blockchain.blocks.v0_4 import BlockBuilder
-from loopchain.blockchain.blocks.v0_5 import BlockHeader, BlockBody, BlockProver
+from loopchain.blockchain.blocks import BlockBuilder as BaseBlockBuilder
+from loopchain.blockchain.blocks.v0_5 import BlockProver
+from loopchain.blockchain.blocks.v1_0.block import Block, BlockHeader, BlockBody
 from loopchain.blockchain.types import Hash32
 
 
-class BlockBuilder(BlockBuilder):
+class BlockBuilder(BaseBlockBuilder):
     version = BlockHeader.version
     BlockHeaderClass = BlockHeader
     BlockBodyClass = BlockBody
+
+    def build(self) -> 'Block':
+        validators_hash = self._last_block.header.validators_hash
+        next_validators_hash = invoke_result.next_reps_hash
+        prev_votes_hash = prev_votes  # FIXME: get root hash
+        prev_state_hash = prev_votes[0].state_hash  # FIXME
+        prev_receipts_hash = self._last_block.body.transactions  # FIXME: get root hash
+        prev_logs_bloom = transactions  # FIXME: get logs_bloom
+
+        hash_: Hash32 = Hash32.new()  # FIXME: hash of the block
+        signature: 'Signature' = Signature.new()
+
+        body = BlockBody(
+            transactions=transactions,
+            prev_votes=prev_votes
+        )
+
+        header = BlockHeader(
+            hash=hash_,
+            prev_hash=prev_id,
+            height=data_number,
+            timestamp=timestamp,
+            peer_id=peer_id,
+            signature=signature,
+            epoch=epoch_num,
+            round=round_num,
+            validators_hash=validators_hash,
+            next_validators_hash=next_validators_hash,
+            prev_votes_hash=prev_votes_hash,
+            transactions_hash=transactions_hash,
+            prev_state_hash=prev_state_hash,
+            prev_receipts_hash=prev_receipts_hash,
+            prev_logs_bloom=prev_logs_bloom
+        )
+
+        return Block(
+            header=header,
+            body=body
+        )
+
+    def build_block_header_data(self) -> dict:
+        pass
+
+    def build_block_body_data(self) -> dict:
+        pass
+
+    def _build_hash(self):
+        pass
 
     def _build_transactions_hash(self):
         if not self.transactions:
