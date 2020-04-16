@@ -1,10 +1,93 @@
-from typing import cast, OrderedDict, List, Optional
+from collections import OrderedDict
+from typing import cast, Sequence
 
 from lft.consensus.messages.message import MessagePool, Message
 
-from loopchain.blockchain import Hash32
+from legacy.channel.channel_property import ChannelProperty
+from legacy.utils.message_queue import StubCollection
+from loopchain.blockchain.blocks import BlockProver, BlockProverType
 from loopchain.blockchain.blocks.v0_3 import BlockProver
-from loopchain.blockchain.blocks import BlockProverType
+from loopchain.blockchain.exception import *
+from loopchain.blockchain.transactions import TransactionSerializer
+from loopchain.blockchain.types import Hash32, ExternalAddress
+
+if TYPE_CHECKING:
+    from loopchain.blockchain.blocks.v1_0.block import Block
+
+
+class InvokeRequest:
+    def __init__(self,
+                 height,
+                 transactions,
+                 prev_peer_id,
+                 block_hash,
+                 prev_block_hash,
+                 timestamp,
+                 prev_votes,
+                 is_block_editable: bool,
+                 tx_versioner):
+        self._transactions: OrderedDict[Hash32, 'Transaction'] = transactions
+        self._height: int = height
+        self._block_hash: Hash32 = block_hash
+        self._prev_block_hash: Hash32 = prev_block_hash
+        self._timestamp = timestamp
+        self._prev_votes = prev_votes
+
+        self._prev_peer_id: ExternalAddress = prev_peer_id
+        self._is_block_editable: bool = is_block_editable
+        self._tx_versioner = tx_versioner
+
+    def serialize(self) -> dict:
+        validators, prev_block_votes = self._serialize_validators_and_prev_votes()
+        return {
+            "block": {
+                "blockHeight": hex(self._height),
+                "blockHash": self._block_hash.hex(),
+                "prevBlockHash": self._prev_block_hash.hex(),
+                "timestamp": hex(self._timestamp)
+            },
+            "isBlockEditable": hex(self._is_block_editable),
+            "transactions": self._serialize_tx(),
+            "prevBlockGenerator": self._prev_peer_id if self._prev_peer_id else "",
+            "prevBlockValidators": validators,
+            "prevBlockVotes": prev_block_votes
+        }
+
+    def _serialize_tx(self):
+        transactions = []
+        for tx in self._transactions.values():
+            tx_serializer = TransactionSerializer.new(tx.version, tx.type(), self._tx_versioner)
+            transaction = {
+                "method": "icx_sendTransaction",
+                "params": tx_serializer.to_full_data(tx)
+            }
+            transactions.append(transaction)
+
+        return transactions
+
+    def _serialize_validators_and_prev_votes(self):
+        prev_block_votes = []
+        prev_block_validators = [vote.rep.hex_hx() for vote in self._prev_votes
+                                 if vote and vote.voter_id != self._prev_peer_id]
+        prev_vote_results = {vote.rep: vote.result() for vote in self._prev_votes
+                             if vote and vote.voter_id != self._prev_peer_id}
+
+        print("Prev vote results: ", prev_vote_results)
+        if prev_vote_results:
+            prev_block_votes = [
+                [
+                    vote_address.hex_hx(),
+                    hex((2 - prev_vote_results[vote_address]) if vote_address in prev_vote_results else False)
+                ]
+                for vote_address in self.find_preps_addresses_by_header(self._prev_peer_id)
+                if vote_address != self._prev_peer_id
+            ]
+            
+        return prev_block_validators, prev_block_votes
+
+    def find_preps_addresses_by_header(self, header: 'BlockHeader') -> Sequence[ExternalAddress]:
+        # FIXME
+        return ExternalAddress.new()
 
 
 class InvokeResult(Message):

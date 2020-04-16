@@ -1,5 +1,108 @@
-from loopchain.blockchain.invoke_result import InvokeResult
-from loopchain.blockchain.types import Hash32
+import os
+
+import pytest
+
+from legacy.blockchain.transactions import v3, TransactionVersioner, TransactionSerializer
+from loopchain.blockchain.blocks.v1_0.block import Block, BlockHeader, BlockBody
+from loopchain.blockchain.invoke_result import InvokeRequest, InvokeResult
+from loopchain.blockchain.types import ExternalAddress, Signature, BloomFilter, Hash32
+from testcase.unittest.blockchain.conftest import TxFactory
+
+
+class TestInvokeRequest:
+    @pytest.mark.parametrize("is_block_editable", [True, False])
+    def test_invoke_request(self, tx_factory: TxFactory, is_block_editable: bool):
+        # GIVEN I have origin data of invoke result
+        height = 2
+        timestamp = 1
+        epoch_num = 1
+        round_num = 1
+        prev_peer_id = ExternalAddress(os.urandom(ExternalAddress.size))
+        data_id = Hash32.fromhex("a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a", ignore_prefix=True)
+
+        tx_versioner = TransactionVersioner()
+
+        tx = tx_factory(v3.version)
+        transactions = {
+            tx.hash: tx
+        }
+        tx_serializer = TransactionSerializer.new(tx.version, tx.type(), tx_versioner)
+
+        header = BlockHeader(
+            hash=data_id,
+            prev_hash=Hash32(os.urandom(32)),
+            height=height,
+            timestamp=timestamp,
+            peer_id=ExternalAddress.new(),
+            signature=Signature.new(),
+            epoch=epoch_num,
+            round=round_num,
+            validators_hash=Hash32.new(),
+            next_validators_hash=Hash32.new(),
+            prev_votes_hash=Hash32.new(),
+            transactions_hash=Hash32.new(),
+            prev_state_hash=Hash32.new(),
+            prev_receipts_hash=Hash32.new(),
+            prev_logs_bloom=BloomFilter.new()
+        )
+        body = BlockBody(
+            transactions=transactions,
+            prev_votes=""
+        )
+        prev_block: Block = Block(header=header, body=body)
+        invoke_request = InvokeRequest(
+            height=height,
+            prev_peer_id=prev_peer_id,
+            block_hash=block_hash,
+            prev_block_hash=prev_block_hash,
+            timestamp=timestamp,
+            prev_votes=prev_votes,
+            is_block_editable=is_block_editable,
+            tx_versioner=tx_versioner
+        )
+
+        invoke_req_dict = invoke_request.serialize()
+
+        expected_request = {
+            "block": {
+                "blockHeight": "0x2",
+                "blockHash": "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a",
+                "timestamp": "0x1",
+                "prevBlockHash": "b7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+            },
+            "transactions": [
+                {
+                    "method": "icx_sendTransaction",
+                    "params": tx_serializer.to_full_data(tx)
+                }
+            ],
+            "isBlockEditable": hex(is_block_editable),
+            "prevBlockGenerator": prev_peer_id,
+            "prevBlockValidators": [
+                "$validator1Address",
+                "$validator2Address",
+                "$validator3Address",
+                ...
+            ],
+            "prevBlockVotes": [
+                ["$voteAddress", "0x0"], # 무응답
+                ["$voteAddress", "0x1"], # 찬성
+                ["$voteAddress", "0x2"], # 반대
+                ...
+            ]
+        }
+        print("Expected req: ", expected_request)
+        # THEN Parameters must be returned as expected
+        block_dict = invoke_req_dict["block"]
+        assert block_dict["blockHeight"] == expected_request["block"]["blockHeight"]
+        assert block_dict["blockHash"] == expected_request["block"]["blockHash"]
+        assert block_dict["timestamp"] == expected_request["block"]["timestamp"]
+
+        assert invoke_req_dict["transactions"] == expected_request["transactions"]
+        assert invoke_req_dict["isBlockEditable"] == expected_request["isBlockEditable"]
+        assert invoke_req_dict["prevBlockGenerator"] == expected_request["prevBlockGenerator"]
+        assert invoke_req_dict["prevBlockValidators"] == expected_request["prevBlockValidators"]
+        assert invoke_req_dict["prevBlockVotes"] == expected_request["prevBlockVotes"]
 
 
 class TestInvokeResult:
