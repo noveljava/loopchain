@@ -12,22 +12,25 @@ from loopchain.blockchain.blocks.v1_0.block_verifier import BlockVerifier
 from loopchain.blockchain.invoke_result import InvokeResultPool
 from loopchain.blockchain.transactions import Transaction, TransactionVerifier
 from loopchain.crypto.signature import Signer
+from loopchain.store.key_value_store import KeyValueStore
 
 if TYPE_CHECKING:
     from loopchain.blockchain.votes.v1_0.vote import BlockVote
     from loopchain.baseservice.aging_cache import AgingCache
+    from loopchain.store.key_value_store_plyvel import KeyValueStorePlyvel
 
 
 class BlockFactory(DataFactory):
     NoneData = Hash32.empty()
     LazyData = Hash32(bytes([255] * 32))
 
-    def __init__(self, peer_auth, tx_pool, tx_versioner, invoke_pool: InvokeResultPool, signer):
+    def __init__(self, peer_auth, tx_queue: 'AgingCache', db: KeyValueStore, tx_versioner, invoke_pool: InvokeResultPool, signer):
         self._peer_auth = peer_auth  # ChannelProperty
         self._tx_versioner = tx_versioner
 
-        self._tx_pool: 'AgingCache' = tx_pool  # TODO: AgingCache?
+        self._tx_queue: 'AgingCache' = tx_queue
         self._invoke_pool: InvokeResultPool = invoke_pool
+        self._db: 'KeyValueStorePlyvel' = db  # TODO: Will be replaced as DB Component
         self._last_block: Block = ""  # FIXME: store it in memory or get it from db
 
         # From BlockBuilder
@@ -66,7 +69,7 @@ class BlockFactory(DataFactory):
         return block
 
     def _add_tx_to_block(self, block_builder: BlockBuilder):
-        tx_queue = self._tx_pool
+        tx_queue: 'AgingCache' = self._tx_queue
 
         block_tx_size = 0
         tx_versioner = self._tx_versioner
@@ -96,7 +99,9 @@ class BlockFactory(DataFactory):
             tv = TransactionVerifier.new(tx.version, tx.type(), tx_versioner)
 
             try:
-                tv.verify(tx)  # FIXME blockchain
+                # FIXME: Currently TransactionVerifier uses `Blockchain` to check uniqueness of tx.
+                # FIXME: To cut the dependencies with `Blockchain`, implement related methods into db store.
+                tv.verify(tx, blockchain=self._db)
             except Exception as e:
                 utils.logger.warning(
                     f"tx hash invalid. tx: {tx} exception: {e}", exc_info=e)
