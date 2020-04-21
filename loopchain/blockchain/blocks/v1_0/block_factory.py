@@ -39,6 +39,15 @@ class BlockFactory(DataFactory):
 
     async def create_data(self, data_number: int, prev_id: bytes, epoch_num: int, round_num: int,
                           prev_votes: Sequence['BlockVote']) -> Block:
+        """Collect tx to make a block. invoke is not done here.
+
+        :param data_number:
+        :param prev_id:
+        :param epoch_num:
+        :param round_num:
+        :param prev_votes:
+        :return: Block
+        """
         prev_id: Hash32
 
         # Epoch.makeup_block
