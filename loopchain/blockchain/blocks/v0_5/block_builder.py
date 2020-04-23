@@ -25,6 +25,7 @@ class BlockBuilder(BlockBuilder):
     BlockBodyClass = BlockBody
 
     def _build_transactions_hash(self):
+        # TODO (@Heizel) I think this overriding is not necessary. (by winDy)
         if not self.transactions:
             return Hash32.empty()
 
