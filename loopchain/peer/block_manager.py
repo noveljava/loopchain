@@ -38,6 +38,9 @@ from loopchain.tools.grpc_helper import GRPCHelper
 from loopchain.utils.icon_service import convert_params, ParamType, response_to_json_query
 from loopchain.utils.message_queue import StubCollection
 
+import time
+import logging
+
 if TYPE_CHECKING:
     from loopchain.channel.channel_service import ChannelService
 
@@ -554,6 +557,8 @@ class BlockManager:
             peer_target, peer_stub = peer_stubs[peer_index]
             util.logger.info(f"Block Height Sync Target : {peer_target} / request height({my_height + 1})")
             try:
+                logging.critical(f"Request Start. - height:{my_height+1}")
+                startTime = time.time()
                 block, max_block_height, current_unconfirmed_block_height, confirm_info, response_code = \
                     self.__block_request(peer_stub, my_height + 1)
             except NoConfirmInfo as e:
@@ -581,6 +586,7 @@ class BlockManager:
                             block, self.blockchain.find_preps_addresses_by_header(block.header))
                         self.blockchain.last_unconfirmed_block = block
                     else:
+                        logging.critical(f"Request End. - duration:{time.time()-startTime}")
                         self.__add_block_by_sync(block, confirm_info)
 
                     if block.header.height == 0:

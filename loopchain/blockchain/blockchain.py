@@ -34,6 +34,8 @@ from loopchain.store.key_value_store import KeyValueStore, KeyValueStoreWriteBat
 from loopchain.utils.icon_service import convert_params, ParamType, response_to_json_query
 from loopchain.utils.message_queue import StubCollection
 
+import time
+
 if TYPE_CHECKING:
     from loopchain.peer import BlockManager
 
@@ -606,7 +608,11 @@ class BlockChain:
                     Hash32.fromhex(next_prep['rootHash'], ignore_prefix=True)):
                 next_prep = None
 
+
+            logging.critical(f"Write Start. - height:{block.header.height}")
+            startTime = time.time()
             next_total_tx = self.__write_block_data(block, confirm_info, receipts, next_prep)
+            logging.critical(f"Write End. - duration:{time.time()-startTime}")
 
             try:
                 if need_to_score_invoke:
@@ -1411,10 +1417,14 @@ class BlockChain:
         }
 
         request = convert_params(request_origin, ParamType.invoke)
+
+        logging.critical(f"Invoke Start. - transactionlen:{len(transactions)}, height:{_block.header.height}")
+        startTime = time.time()
         stub = StubCollection().icon_score_stubs[ChannelProperty().name]
         response: dict = cast(dict, stub.sync_task().invoke(request))
         response_to_json_query(response)
-
+        logging.critical(f"Invoke End. - duration:{time.time()-startTime}")
+        
         tx_receipts_origin = response.get("txResults")
         if not isinstance(tx_receipts_origin, dict):
             tx_receipts: dict = {tx_receipt['txHash']: tx_receipt for tx_receipt in cast(list, tx_receipts_origin)}
