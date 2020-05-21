@@ -3,6 +3,7 @@ from loopchain.blockchain.exception import TransactionInvalidNidError
 from loopchain.blockchain.transactions import TransactionVerifier as BaseTransactionVerifier
 from loopchain.blockchain.transactions.v3 import TransactionSerializer, HASH_SALT
 
+import time
 if TYPE_CHECKING:
     from loopchain.blockchain.transactions import Transaction
 
@@ -24,8 +25,15 @@ class TransactionVerifier(BaseTransactionVerifier):
         self.verify_loosely(tx, blockchain)
 
     def verify_loosely(self, tx: 'Transaction', blockchain=None):
+        start_time = time.time()
         self.verify_hash(tx)
+        verify_hash_end_time = time.time()
         self.verify_signature(tx)
+        end_time = time.time()
+
+        with open("./tmp.txt", "a") as log_time:
+            log_time.write(f"verfiy_hash time: {verify_hash_end_time-start_time}\t sig time: {end_time - verify_hash_end_time}\n")
+
         if blockchain:
             nid = blockchain.find_nid()
             if hex(tx.nid) != nid:
