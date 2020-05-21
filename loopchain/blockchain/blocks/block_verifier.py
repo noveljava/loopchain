@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable
 
@@ -37,8 +39,13 @@ class BlockVerifier(ABC):
         self.invoke_func: Callable[['Block'], ('Block', dict)] = None
 
     def verify(self, block: 'Block', prev_block: 'Block', blockchain=None, **kwargs):
+        start_time = time.time()
         self.verify_transactions(block, blockchain)
-        return self.verify_common(block, prev_block, **kwargs)
+        result = self.verify_common(block, prev_block, **kwargs)
+        end_time = time.time()
+        count = len(block.body.transactions)
+        utils.logger.debug(f"Tx Count: {count}, duration: {end_time-start_time} sec.")
+        return result
 
     def verify_loosely(self, block: 'Block', prev_block: 'Block', blockchain=None, **kwargs):
         self.verify_transactions_loosely(block, blockchain)
